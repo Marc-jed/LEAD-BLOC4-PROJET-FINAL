@@ -2,14 +2,11 @@ pipeline {
     agent any
 
     environment {
-        TEST_DIR = "tests"
         AWS_DEFAULT_REGION = 'eu-west-1'
-        S3_PREDICTION_DATA_KEY = "compile/dataset_pour_prediction_2025.csv"
-        S3_COORD_DATA_KEY = "data_folder/coord_stations.csv"
-        S3_FEU_DATA_KEY = "data_folder/historique_incendie_corse_cleaned_2025.csv"
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
@@ -19,53 +16,43 @@ pipeline {
         stage('Build Docker image') {
             steps {
                 sh '''
-                    docker build -t fire-tests -f Dockerfile .
+                    docker build -t fire-tests .
                 '''
             }
         }
 
-    stage('Run pytest') {
-        steps {
-            script {
-                echo "=== Début de l'injection des credentials ==="
+        stage('Run tests') {
+            steps {
                 withCredentials([
                     string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'),
                     string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY'),
-                    string(credentialsId: 'S3_BUCKET_NAME', variable: 'S3_BUCKET_NAME'),
-                    string(credentialsId: 'DB_HOST', variable: 'DB_HOST'),
-                    string(credentialsId: 'DB_NAME', variable: 'DB_NAME'),
-                    string(credentialsId: 'DB_USER', variable: 'DB_USER'),
-                    string(credentialsId: 'DB_PASS', variable: 'DB_PASS'),
-                    string(credentialsId: 'DB_PORT', variable: 'DB_PORT')
+                    string(credentialsId: 'S3_BUCKET_NAME', variable: 'S3_BUCKET_NAME')
                 ]) {
-                    echo "=== Création du fichier .env ==="
-                    // Crée un fichier .env avec toutes les variables
-                    writeFile file: '.env', text: """
-                        S3_BUCKET_NAME=${env.S3_BUCKET_NAME}
-                        AWS_ACCESS_KEY_ID=${env.AWS_ACCESS_KEY_ID}
-                        AWS_SECRET_ACCESS_KEY=${env.AWS_SECRET_ACCESS_KEY}
-                        AWS_DEFAULT_REGION=eu-west-1
-                        DB_HOST=${env.DB_HOST}
-                        DB_NAME=${env.DB_NAME}
-                        DB_USER=${env.DB_USER}
-                        DB_PASS=${env.DB_PASS}
-                        DB_PORT=${env.DB_PORT:-5432}
-                        S3_PREDICTION_DATA_KEY=${env.S3_PREDICTION_DATA_KEY}
-                        S3_COORD_DATA_KEY=${env.S3_COORD_DATA_KEY}
-                        S3_FEU_DATA_KEY=${env.S3_FEU_DATA_KEY}
-                    """
-    
-                    // Affiche le contenu du fichier .env pour débogage
-                    sh 'cat .env'
-    
                     sh '''
                         mkdir -p pytest-reports
                         docker run --rm \
-                            -v $(pwd)/pytest-reports:/app/pytest-reports \
-                            --env-file .env \
-                            fire-tests sh -c "env && pytest tests/ --junitxml=/app/pytest-reports/pytest-report.xml"
+                          -e AWS_ACCESS_KEY_ID \
+                          -e AWS_SECRET_ACCESS_KEY \
+                          -e AWS_DEFAULT_REGION \
+                          -e S3_BUCKET_NAME \
+                          -v $(pwd)/pytest-reports:/app/pytest-reports \
+                          fire-tests \
+                          pytest tests/ --junitxml=/app/pytest-reports/pytest-report.xml
                     '''
+                }
             }
+        }
+    }
+
+    post {
+        always {
+            junit 'pytest-reports/pytest-report.xml'
+        }
+        failure {
+            echo '❌ Tests échoués'
+        }
+        success {
+            echo '✅ Tests OK'
         }
     }
 }
