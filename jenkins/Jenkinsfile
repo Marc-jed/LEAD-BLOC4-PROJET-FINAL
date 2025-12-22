@@ -24,6 +24,9 @@ pipeline {
         stage('Run tests') {
             steps {
                 withCredentials([
+                    sh 'echo "AWS_ACCESS_KEY_ID is set: ${AWS_ACCESS_KEY_ID:+YES}"'
+                    sh 'echo "S3_BUCKET_NAME is set: ${S3_BUCKET_NAME:+YES}"'
+
                     string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'),
                     string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY'),
                     string(credentialsId: 'S3_BUCKET_NAME', variable: 'S3_BUCKET_NAME')
