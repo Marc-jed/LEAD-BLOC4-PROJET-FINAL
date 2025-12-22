@@ -20,51 +20,37 @@ pipeline {
     }
 
     stages {
-
         stage('Checkout') {
             steps {
-                echo "Repository cloned"
+                checkout scm
             }
         }
 
-        stage('Setup Python env') {
+        stage('Build Docker image') {
             steps {
-                dir("${TEST_DIR}") {
-                    sh '''
-                        python -m venv venv
-                        . venv/bin/activate
-                        pip install --upgrade pip
-                        pip install -r requirements.txt
-                    '''
-                }
+                sh '''
+                    docker build -t fire-tests -f Dockerfile .
+                '''
             }
         }
 
         stage('Run pytest') {
             steps {
-                dir("${TEST_DIR}") {
-                    sh '''
-                        . venv/bin/activate
-                        # --- Début des commandes de débogage ---
-                        echo "PYTHONPATH actuel : $PYTHONPATH"
-                        echo "Contenu du dossier courant :"
-                        ls -la
-                        echo "Contenu de la racine du workspace :"
-                        ls -la ${WORKSPACE}
-                        # --- Fin des commandes de débogage ---
-                        export PYTHONPATH=${WORKSPACE}
-                        echo "Nouveau PYTHONPATH : $PYTHONPATH"
-                        pytest . --junitxml=pytest-report.xml
-                    '''
-                }
+                sh '''
+                    # Crée un dossier pour les rapports sur l'hôte
+                    mkdir -p pytest-reports
+                    # Lance le conteneur en montant un volume pour récupérer le rapport
+                    docker run --rm \
+                        -v $(pwd)/pytest-reports:/app/pytest-reports \
+                        fire-tests sh -c "pytest tests/ --junitxml=/app/pytest-reports/pytest-report.xml"
+                '''
             }
         }
 
         stage('Publish test results') {
             steps {
-                dir("${TEST_DIR}") {
-                    junit 'pytest-report.xml'
-                }
+                # Publique le rapport depuis le dossier monté
+                junit 'pytest-reports/pytest-report.xml'
             }
         }
     }
