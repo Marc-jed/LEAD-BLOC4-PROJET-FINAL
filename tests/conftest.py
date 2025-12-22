@@ -69,7 +69,7 @@ def coord_station(s3_client, tmp_path_factory):
 
     s3_client.download_file(bucket, s3_key, str(local_file))
 
-    df = pd.read_csv(local_file, sep=";", low_memory=False)
+    df = pd.read_csv(local_file, sep=",", low_memory=False)
 
     if df.empty:
         pytest.fail("Downloaded coord_stations dataset is empty")
@@ -87,7 +87,7 @@ def historique_feu(s3_client, tmp_path_factory):
 
     s3_client.download_file(bucket, s3_key, str(local_file))
 
-    df = pd.read_csv(local_file, sep=";", low_memory=False)
+    df = pd.read_csv(local_file, sep=",", low_memory=False)
 
     if df.empty:
         pytest.fail("Downloaded historique incendie dataset is empty")
