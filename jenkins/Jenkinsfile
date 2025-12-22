@@ -1,0 +1,63 @@
+pipeline {
+    agent any
+
+    environment {
+        TEST_DIR = "tests"
+
+        DB_HOST = credentials('DB_HOST')
+        DB_NAME = credentials('DB_NAME')
+        DB_USER = credentials('DB_USER')
+        DB_PASS = credentials('DB_PASS')
+        DB_PORT = credentials('DB_PORT')
+
+        AWS_ACCESS_KEY_ID = credentials('AWS_ACCESS_KEY_ID')
+        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEYy')
+        AWS_DEFAULT_REGION = 'eu-west-1'
+        S3_BUCKET_NAME = credentials('S3_BUCKET_NAME')
+        S3_PREDICTION_DATA_KEY = "compile/dataset_pour_prediction_2025.csv"
+        S3_COORD_DATA_KEY = "data_folder/coord_stations.csv"
+        S3_FEU_DATA_KEY ="data_folder/historique_incendie_corse_cleaned_2025.csv"
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                echo "Repository cloned"
+            }
+        }
+
+        stage('Setup Python env') {
+            steps {
+                dir("${TEST_DIR}") {
+                    sh '''
+                        python -m venv venv
+                        . venv/bin/activate
+                        pip install --upgrade pip
+                        pip install -r requirements.txt
+                    '''
+                }
+            }
+        }
+
+        stage('Run pytest') {
+            steps {
+                dir("${TEST_DIR}") {
+                    sh '''
+                        . venv/bin/activate
+                        export PYTHONPATH=$(pwd)/..
+                        pytest . --junitxml=pytest-report.xml
+                    '''
+                }
+            }
+        }
+
+        stage('Publish test results') {
+            steps {
+                dir("${TEST_DIR}") {
+                    junit 'pytest-report.xml'
+                }
+            }
+        }
+    }
+}
