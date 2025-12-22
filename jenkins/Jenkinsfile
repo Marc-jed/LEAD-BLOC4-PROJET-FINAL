@@ -27,41 +27,40 @@ pipeline {
         stage('Run pytest') {
             steps {
                 script {
-                    // Utilise withCredentials pour injecter les secrets de manière sécurisée
                     withCredentials([
-                        string(credentialsId: 'DB_HOST', variable: 'DB_HOST'),
-                        string(credentialsId: 'DB_NAME', variable: 'DB_NAME'),
-                        string(credentialsId: 'DB_USER', variable: 'DB_USER'),
-                        string(credentialsId: 'DB_PASS', variable: 'DB_PASS'),
-                        string(credentialsId: 'DB_PORT', variable: 'DB_PORT'),
-                        string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'),
-                        string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY'),
-                        string(credentialsId: 'S3_BUCKET_NAME', variable: 'S3_BUCKET_NAME')
+                        string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+                        string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY'),
+                        string(credentialsId: 's3-bucket-name', variable: 'S3_BUCKET_NAME'),
+                        string(credentialsId: 'db-host', variable: 'DB_HOST'),
+                        string(credentialsId: 'db-name', variable: 'DB_NAME'),
+                        string(credentialsId: 'db-user', variable: 'DB_USER'),
+                        string(credentialsId: 'db-pass', variable: 'DB_PASS'),
+                        string(credentialsId: 'db-port', variable: 'DB_PORT')
                     ]) {
                         sh '''
-                            # Crée un dossier pour les rapports sur l'hôte
+                            # Crée un dossier pour les rapports
                             mkdir -p pytest-reports
-                            # Lance le conteneur en passant les variables d'environnement
+        
+                            # Affiche les variables pour débogage (optionnel)
+                            echo "S3_BUCKET_NAME: $S3_BUCKET_NAME"
+                            echo "DB_HOST: $DB_HOST"
+        
+                            # Lance le conteneur en passant TOUTES les variables d'environnement
                             docker run --rm \
                                 -v $(pwd)/pytest-reports:/app/pytest-reports \
+                                -e S3_BUCKET_NAME="$S3_BUCKET_NAME" \
+                                -e AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
+                                -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
+                                -e AWS_DEFAULT_REGION="eu-west-1" \
                                 -e DB_HOST="$DB_HOST" \
                                 -e DB_NAME="$DB_NAME" \
                                 -e DB_USER="$DB_USER" \
                                 -e DB_PASS="$DB_PASS" \
-                                -e DB_PORT="$DB_PORT" \
-                                -e AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
-                                -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
-                                -e AWS_DEFAULT_REGION="$AWS_DEFAULT_REGION" \
-                                -e S3_BUCKET_NAME="$S3_BUCKET_NAME" \
-                                -e S3_PREDICTION_DATA_KEY="$S3_PREDICTION_DATA_KEY" \
-                                -e S3_COORD_DATA_KEY="$S3_COORD_DATA_KEY" \
-                                -e S3_FEU_DATA_KEY="$S3_FEU_DATA_KEY" \
-                                fire-tests sh -c "pytest tests/ --junitxml=/app/pytest-reports/pytest-report.xml"
+                                -e DB_PORT="${DB_PORT:-5432}" \
+                                fire-tests sh -c "env && pytest tests/ --junitxml=/app/pytest-reports/pytest-report.xml"
                         '''
                     }
                 }
-            }
-        }
 
         stage('Publish test results') {
             steps {
