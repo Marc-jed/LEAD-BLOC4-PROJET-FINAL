@@ -49,21 +49,21 @@ MLFLOW-FIRE/
 
 ## Configuration des variables d’environnement
 
-### Création du fichier `.secrets`
+Les variables sensibles (accès aux bases de données, services cloud, etc.) doivent être configurées **directement dans les Settings de l’espace Hugging Face**.
 
-Créer un fichier `.secrets` à la racine du dossier avec les variables suivantes :
+### Exemples de variables à configurer
 
 ```bash
 MLFLOW_DEFAULT_ARTIFACT_ROOT = 
 AWS_ACCESS_KEY_ID= 
 AWS_SECRET_ACCESS_KEY= 
 BACKEND_STORE_URI= 
+PORT = 
 S3_BUCKET=
 
 ```
 
-Ce fichier **ne doit pas être versionné**.
-Ajouter `.secrets` à votre `.gitignore` si ce n’est pas déjà fait.
+Aucun fichier `.secrets` n’est stocké dans le dépôt pour cette application.
 
 ---
 
