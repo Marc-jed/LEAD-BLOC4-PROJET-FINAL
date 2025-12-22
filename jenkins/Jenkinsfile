@@ -28,14 +28,14 @@ pipeline {
             steps {
                 script {
                     withCredentials([
-                        string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
-                        string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY'),
-                        string(credentialsId: 's3-bucket-name', variable: 'S3_BUCKET_NAME'),
-                        string(credentialsId: 'db-host', variable: 'DB_HOST'),
-                        string(credentialsId: 'db-name', variable: 'DB_NAME'),
-                        string(credentialsId: 'db-user', variable: 'DB_USER'),
-                        string(credentialsId: 'db-pass', variable: 'DB_PASS'),
-                        string(credentialsId: 'db-port', variable: 'DB_PORT')
+                        string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'),
+                        string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY'),
+                        string(credentialsId: 'S3_BUCKET_NAME', variable: 'S3_BUCKET_NAME'),
+                        string(credentialsId: 'DB_HOST', variable: 'DB_HOST'),
+                        string(credentialsId: 'DB_NAME', variable: 'DB_NAME'),
+                        string(credentialsId: 'DB_USER', variable: 'DB_USER'),
+                        string(credentialsId: 'DB_PASS', variable: 'DB_PASS'),
+                        string(credentialsId: 'DB_PORT', variable: 'DB_PORT')
                     ]) {
                         sh '''
                             # Crée un dossier pour les rapports
