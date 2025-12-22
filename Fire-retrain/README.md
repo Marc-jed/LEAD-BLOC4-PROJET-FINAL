@@ -104,9 +104,9 @@ Endpoint déclenché par le DAG **`get_meteoday`**.
 
 ## Configuration des variables d’environnement
 
-### Création du fichier `.secrets`
+Les variables sensibles (accès aux bases de données, services cloud, etc.) doivent être configurées **directement dans les Settings de l’espace Hugging Face**.
 
-Créer un fichier `.secrets` à la racine du projet avec les variables suivantes (exemple) :
+### Exemples de variables à configurer
 
 ```bash
 MLFLOW_DEFAULT_ARTIFACT_ROOT = 
@@ -119,14 +119,11 @@ S3_BUCKET=
 
 DB_USER = 
 DB_NAME = 
-DB_PASSWORD = 
+DB_PASSWORD =
 DB_HOST = 
 ```
 
-Ce fichier :
-
-* ne doit pas être versionné,
-* doit être ajouté au `.gitignore`.
+Aucun fichier `.secrets` n’est stocké dans le dépôt pour cette application.
 
 ---
 
