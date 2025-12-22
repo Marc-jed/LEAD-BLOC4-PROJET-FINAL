@@ -35,7 +35,7 @@ def s3_client():
     except KeyError as e:
         pytest.fail(f"Missing AWS environment variable: {e}")
         
-    s3 = boto3.client('s3', aws_access_key_id = AWS_ACCESS_KEY_ID, aws_secrect_access_key=AWS_SECRET_ACCESS_KEY, region_name=AWS_DEFAULT_REGION)
+    s3 = boto3.client('s3', aws_access_key_id = AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, region_name=AWS_DEFAULT_REGION)
     try:
         s3.head_bucket(Bucket=S3_BUCKET)
     except Exception as e:
