@@ -39,7 +39,7 @@ pipeline {
                 }
             }
         }
-echo $PYTHONPATH
+    echo $PYTHONPATH
         stage('Run pytest') {
             steps {
                 dir("${TEST_DIR}") {
