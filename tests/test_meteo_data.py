@@ -1,6 +1,6 @@
 import pandas as pd
 import pytest
-from Airflow.Dags.new_meteo import transform_meteo
+from Fire_retrain.features_fusion import run_features_and_fusion
 
 list_col = ['POSTE',
  'DATE',
@@ -198,8 +198,9 @@ list_col2 = ['POSTE',
  'ETPGRILLE_7j']
 
 def test_cleaner_data(data_for_test, list_col2):
-    test = transform_meteo(data_for_test)
+    test = run_features_and_fusion(data_for_test)
     assert data_for_test.shape[1] < test.shape[1]
+    list_col2 = list_col2.str.lower()
     for col in list_col2:
         assert col in test.columns, f"colonne manquante après nettoyage : {col}"
     

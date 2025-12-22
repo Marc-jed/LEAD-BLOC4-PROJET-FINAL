@@ -40,52 +40,42 @@ def s3_client():
 
 @pytest.fixture(scope="session")
 def meteoday_get(neon_engine):
-    query = f"""SELECT * FROM meteoday WHERE Date = CURRENT_DATE - INTERVAL '1 day'"""
+    query = f"""SELECT * FROM meteoday WHERE date = CURRENT_DATE - INTERVAL '1 day'"""
     df=pd.read_sql(query,neon_engine)
     if df.empty:
         pytest.skip("No meteoday data for yesterday")
     return df
 
 @pytest.fixture(scope="session")
-def data_for_test(s3_client, tmp_path_factory):
-    bucket = os.environ["S3_BUCKET_NAME"]
-    s3_key = os.environ["S3_PREDICTION_DATA_KEY"]
-    
-
-    tmp_dir = tmp_path_factory.mktemp("s3_data")
-    local_file = tmp_dir / "predictions.csv"
-
-    s3_client.download_file(bucket, s3_key, str(local_file))
-
-    df = pd.read_csv(local_file, sep=";", low_memory=False)
-
+def data_for_test(neon_engine):
+    query = f"""SELECT * FROM data_prediction WHERE date = CURRENT_DATE - INTERVAL '1 day'"""
+    df=pd.read_sql(query,neon_engine)
     if df.empty:
-        pytest.fail("Downloaded prediction dataset is empty")
-
+        pytest.skip("No meteoday data for yesterday")
     return df
 
 @pytest.fixture(scope="session")
 def coord_station(s3_client, tmp_path_factory):
     bucket = os.environ["S3_BUCKET_NAME"]
-    s3_key = os.environ["S3_COORD_DATA_KEY"]
+    s3_key = "dataset/coord_stations.csv"
     
 
     tmp_dir = tmp_path_factory.mktemp("s3_data")
-    local_file = tmp_dir / "coord_station.csv"
+    local_file = tmp_dir / "coord_stations.csv"
 
     s3_client.download_file(bucket, s3_key, str(local_file))
 
     df = pd.read_csv(local_file, sep=";", low_memory=False)
 
     if df.empty:
-        pytest.fail("Downloaded coord_station dataset is empty")
+        pytest.fail("Downloaded coord_stations dataset is empty")
 
     return df
 
 @pytest.fixture(scope="session")
 def historique_feu(s3_client, tmp_path_factory):
     bucket = os.environ["S3_BUCKET_NAME"]
-    s3_key = os.environ["S3_FEU_DATA_KEY"]
+    s3_key = "dataset/Incendies_2006_2024 (1).csv"
     
 
     tmp_dir = tmp_path_factory.mktemp("s3_data")
@@ -96,13 +86,13 @@ def historique_feu(s3_client, tmp_path_factory):
     df = pd.read_csv(local_file, sep=";", low_memory=False)
 
     if df.empty:
-        pytest.fail("Downloaded coord_station dataset is empty")
+        pytest.fail("Downloaded historique incendie dataset is empty")
 
     return df
 
 @pytest.fixture(scope="session")
 def prediction_get(neon_engine):
     # Charger les données depuis néon
-    query = f"""SELECT * FROM data_prediction WHERE Date = CURRENT_DATE - INTERVAL '1 day' """
+    query = f"""SELECT * FROM data_prediction WHERE date = CURRENT_DATE - INTERVAL '1 day' """
     df=pd.read_sql(query,neon_engine)
     return df
