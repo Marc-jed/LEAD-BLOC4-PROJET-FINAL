@@ -13,3 +13,7 @@ requests
 boto3
 sqlalchemy
 s3fs
+geopy
+psycopg2-binary
+uvicorn
+numpy
