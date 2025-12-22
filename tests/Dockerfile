@@ -36,20 +36,15 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Définir le PYTHONPATH pour que les modules soient trouvés
-ENV PYTHONPATH=/home
+ENV PYTHONPATH=/app
 
 # Copier les fichiers de dépendances et installer les dépendances Python
 COPY requirements.txt /tmp/
-RUN pip install --upgrade pip
-RUN pip install -r /tmp/requirements.txt
+RUN pip install --upgrade pip && \
+    pip install -r /tmp/requirements.txt
 
-
-RUN mkdir tests
-# Copier les fichiers du projet dans le container
-# COPY test_etl_meteo.py /app/tests
-# COPY conftest.py /app/tests
-# COPY test_data.py /app/tests
-COPY . /app/tests
+# Copier TOUT le projet dans /app (et non dans /app/tests)
+COPY . /app
 
 # Définir le point d'entrée pour exécuter les tests avec pytest
-CMD ["python", "-m", "pytest", "tests/"]
+CMD ["pytest", "tests/"]
