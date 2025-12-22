@@ -1,0 +1,15 @@
+scikit-learn
+joblib
+pytest
+great_expectations
+# ccxt==1.85.*
+# apache-airflow-providers-postgres
+apache-airflow-providers-amazon
+apache-airflow==2.9.0 --constraint https://raw.githubusercontent.com/apache/airflow/constraints-2.9.0/constraints-3.10.txt
+psycopg[binary]
+pandas
+tqdm
+requests
+boto3
+sqlalchemy
+s3fs
