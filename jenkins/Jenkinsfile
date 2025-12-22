@@ -39,13 +39,21 @@ pipeline {
                 }
             }
         }
-    echo $PYTHONPATH
+
         stage('Run pytest') {
             steps {
                 dir("${TEST_DIR}") {
                     sh '''
                         . venv/bin/activate
+                        # --- Début des commandes de débogage ---
+                        echo "PYTHONPATH actuel : $PYTHONPATH"
+                        echo "Contenu du dossier courant :"
+                        ls -la
+                        echo "Contenu de la racine du workspace :"
+                        ls -la ${WORKSPACE}
+                        # --- Fin des commandes de débogage ---
                         export PYTHONPATH=${WORKSPACE}
+                        echo "Nouveau PYTHONPATH : $PYTHONPATH"
                         pytest . --junitxml=pytest-report.xml
                     '''
                 }
