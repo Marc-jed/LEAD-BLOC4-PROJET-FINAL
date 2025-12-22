@@ -23,6 +23,7 @@ import boto3
 import psycopg2
 import datetime
 # import mlflow
+from typing import Optional
 from lifelines import CoxPHFitter
 from itertools import product
 from tqdm import tqdm
@@ -32,22 +33,21 @@ from xgbse.converters import convert_to_structured
 from sklearn.preprocessing import StandardScaler
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline, make_pipeline
-from sklearn.model_selection import train_test_split,GridSearchCV, KFold, ParameterGrid, 
-from sklearn.ensemble import GradientBoostingSurvivalAnalysis
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, roc_auc_score, cumulative_dynamic_auc, concordance_index_censored
+from sklearn.model_selection import train_test_split,GridSearchCV, KFold, ParameterGrid
+from sksurv.ensemble import GradientBoostingSurvivalAnalysis
 from sklearn.exceptions import UndefinedMetricWarning
 from sklearn.cluster import DBSCAN
 from sklearn import set_config
 from sksurv.datasets import load_breast_cancer
+from sksurv.metrics import concordance_index_censored
 from sksurv.linear_model import CoxnetSurvivalAnalysis, CoxPHSurvivalAnalysis
-from sksurv.preprocessing import OneHotEncoder
 from sksurv.util import Surv
+from sksurv.preprocessing import OneHotEncoder
 from branca.element import Template, MacroElement  
 from folium import DivIcon
 from streamlit_folium import st_folium
 from sqlalchemy import create_engine, text
 
-from dotenv import load_dotenv
 
 
 warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
@@ -63,7 +63,7 @@ page = st.sidebar.radio("Aller à", [
     "Accueil",
     "Notre Projet",
     "Exploration des données",
-    # "Résultats des modèles",
+    "Résultats des modèles",
     
 ])
 #________________________________________________________# Footer#_____________________________________________________________
@@ -81,7 +81,7 @@ os.environ['S3_BUCKET'] = os.getenv('S3_BUCKET')
 s3 = boto3.client('s3')
 
 db_user = os.getenv("DB_USER")
-db_password = os.getenv("DB_PASSWORD")
+db_password = os.getenv("DB_PASS")
 db_host = os.getenv("DB_HOST")
 db_name = os.getenv("DB_NAME")
 
@@ -89,8 +89,9 @@ engine = create_engine(f"postgresql+psycopg2://{db_user}:{db_password}@{db_host}
 
 @st.cache_data
 def load_model_data():
-    yesterday = (datetime.date.today() - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-    query = f"""SELECT * FROM data_prediction WHERE Date = {yesterday}"""  
+    yesterday = (datetime.date.today() - datetime.timedelta(days=1))
+    query = """SELECT * FROM data_prediction WHERE date BETWEEN '2024-01-01' AND '{yesterday}'"""
+    # query = f"""SELECT * FROM data_prediction WHERE date = '{yesterday}'"""  
     # s3.download_file(os.getenv('S3_Bucket'),'compile/predictions_feu_2025.csv', 'prediction_feu_2025.csv')
     # url = "https://projet-incendie.s3.eu-west-3.amazonaws.com/dataset_modele_decompte.csv"
     try:
@@ -106,9 +107,9 @@ def load_model_data():
 #_________________________________________________# Chargement des données d'incendies et de coordonnées#_______________________________________
 @st.cache_data
 def load_data():
-    s3.download_file=(os.getenv('S3_BUCKET'),'dataset/Incendies_2006_2024 (1).csv', 'incendies_2006_2024.csv')
+    s3.download_file(os.getenv('S3_BUCKET'),'dataset/Incendies_2006_2024 (1).csv', 'incendies_2006_2024.csv')
     # url_incendies = 'https://projet-incendie.s3.eu-west-3.amazonaws.com/Incendies_2006_2024.csv'
-    return pd.read_csv('incendies_2006_2024.csv', sep=';', encoding='utf-8', skiprows=3)
+    return pd.read_csv('incendies_2006_2024.csv', sep=';', low_memory=False)
 
 @st.cache_data
 def load_coords():
@@ -166,8 +167,8 @@ def get_latest_model_key():
 
     except Exception as e:
         raise RuntimeError(f"Erreur récupération modèle S3 : {e}")
-
-def load_model_from_s3(key: str | None = None):
+@st.cache_resource
+def load_model_from_s3(key: Optional[str] = None):
     bucket = os.getenv('S3_BUCKET')
     if key is None:
         key = get_latest_model_key()
@@ -176,8 +177,8 @@ def load_model_from_s3(key: str | None = None):
     model = joblib.load(buffer)
     return model
 
-
-def load_baseline_S3(bucket: str, key: str):
+@st.cache_resource
+def load_baseline_S3():
     bucket = os.getenv('S3_BUCKET')
     BASELINE_KEY = "mlflow/models/baseline_c87008d290ec435eb93cc302e41ce934.pkl"
     response = s3.get_object(Bucket=bucket, Key=BASELINE_KEY)
@@ -188,7 +189,7 @@ def load_baseline_S3(bucket: str, key: str):
 # ────────────────────────────────────────────────
 # 2) FONCTION D’ENTRAÎNEMENT + PRÉDICTIONS
 # ────────────────────────────────────────────────
-@st.cache_data(show_spinner="⚙️ Entraînement du modèle…", ttl=None)
+# @st.cache_data(show_spinner="⚙️ Entraînement du modèle…", ttl=None)
 def predict(df_raw: pd.DataFrame, model, baseline_survival) -> pd.DataFrame:
     """Retourne df_map prêt pour la carte avec les colonnes
        proba_7j, proba_30j, …, proba_180j."""
@@ -219,8 +220,8 @@ def predict(df_raw: pd.DataFrame, model, baseline_survival) -> pd.DataFrame:
     for t, col in horizons.items():
         S_t = (S0_at(t)) ** HR     # survival
         df[col] = 1 - S_t          # prob event
-
-    df_map = df[["latitude_feu", "longitude_feu", "ville"] + list(horizons.values())].copy()
+    df_map = df[["lat", "lon", "nom"] + list(horizons.values())].copy()
+    # df_map = df[["latitude_feu", "longitude_feu", "ville"] + list(horizons.values())].copy()
     return df_map
 
 # ────────────────────────────────────────────────
@@ -229,7 +230,7 @@ def predict(df_raw: pd.DataFrame, model, baseline_survival) -> pd.DataFrame:
 if page == "Accueil":
     st.title("Carte du risque d’incendie en Corse")
 
-    df_raw = load_raw_data()
+    df_raw = load_model_data()
     
     latest_model_key = get_latest_model_key()
     model = load_model_from_s3(latest_model_key)
@@ -254,11 +255,11 @@ if page == "Accueil":
 
     # Palette dynamique
     vmax = float(df_map[col_proba].max())
-    fig = px.scatter_mapbox(
+    fig = px.scatter_map(
         df_map,
-        lat="latitude_feu",
-        lon="longitude_feu",
-        hover_name="ville",
+        lat="lat",
+        lon="lon",
+        hover_name="nom",
         hover_data={col_proba: ":.2%"},
         color=col_proba,
         color_continuous_scale="YlOrRd",  # jaune → orange → rouge
@@ -267,7 +268,7 @@ if page == "Accueil":
         height=650,
     )
     fig.update_layout(
-        mapbox_style="open-street-map",
+        map_style="open-street-map",
         margin=dict(l=0, r=0, t=0, b=0),
         coloraxis_colorbar=dict(title="Probabilité", tickformat=".0%"),
     )
@@ -280,12 +281,6 @@ if page == "Accueil":
 
 if page == "Accueil":
 
-    # Chargement des données des casernes
-    # df_casernes = pd.read_csv(
-    #     'https://projet-incendie.s3.eu-west-3.amazonaws.com/casernes_corses.csv',
-    #     sep=',',
-    #     encoding='utf8'
-    # )
     s3.download_file(os.getenv('S3_BUCKET'), 'dataset/casernes_corses.csv', 'casernes_corses.csv')
     df_casernes = pd.read_csv('casernes_corses.csv', sep=',', encoding='utf8')
     # Nettoyage des coordonnées
@@ -465,8 +460,8 @@ if page == "Notre Projet":
 - **Fermeture de massif** enclenchée 1 seule fois : forêt de Pinia
             """)
 #---------------------------------------------------Equipe du projet---------------------------------------------------
-    st.subheader("👨‍💻 Équipe du projet")
-    col3= st.columns(1)
+    # st.subheader("👨‍💻 Équipe du projet")
+    # col3= st.columns(1)
     # col1, col2, col3 = st.columns(3)
     # with col1:
     #     st.image("images/Faycal_Belambri.jpg", width=150)
@@ -474,9 +469,9 @@ if page == "Notre Projet":
     # with col2:
     #     st.image("images/Joel_Termondjian.jpg", width=150)  
     #     st.markdown("**Joël Termondjian**\n\nData Scientist\n\nResponsable des données\n\nPreprocessing\n\nData Enagineering")
-    with col3:
-        st.image("images/Marc_Barthes.jpg", width=150)
-        st.markdown("**Marc Barthes**\n\nData Scientist\n\nML Engineer\n\nExpert en modèles de prédiction")
+    # with col3:
+    #     st.image("images/Marc_Barthes.jpg", width=150)
+    #     st.markdown("**Marc Barthes**\n\nData Scientist\n\nML Engineer\n\nExpert en modèles de prédiction")
 #---------------------------------------------------Notre Objectif --------------------------------------------------------
   
     st.subheader("🎯 Notre Objectif")
@@ -819,80 +814,28 @@ if page == "Exploration des données":
 
     # Affichage Streamlit
     st.plotly_chart(fig)
-#---------------------------------------------------- Les 10 départements avec le plus d’incendies -----------------------------------------
-# import plotly.graph_objects as go
 
-# -----------------------------------------------------------
-# 🔥 Top-10 des départements par nombre de feux – version GO
-# -----------------------------------------------------------
-if page == "Exploration des données":
-    df_temp = df_merge.copy()
-    df_temp["Département"] = df_temp["Département"].replace(
-        {"2A": "2A/2B", "2B": "2A/2B"}
-    )
+# ---------------------------------------------------- Page Résultats des modèles -----------------------------------------
 
-    df_count = (
-        df_temp.groupby("Département")
-        .size()
-        .reset_index(name="Nombre de feux")
-        .sort_values("Nombre de feux", ascending=False)
-        .head(10)
-    )
+elif page == "Résultats des modèles":
+    st.title("📈 Résultats des modèles prédictifs")
+    st.subheader("### Comparaison des modèles de Survival Analysis")
+    
+    st.markdown("""
+    | Modèle                            | Concordance Index | 
+    |-----------------------------------|-------------------|
+    | Predict survival fonction (MVP)   | 0.69              |                 
+    | XGBOOST survival cox              | 0.752             |      
+    """)
 
-    # ── Barres avec labels (Graph Objects)
-    fig_top10_feux = go.Figure(
-        data=go.Bar(
-            x=df_count["Département"],
-            y=df_count["Nombre de feux"],
-            text=df_count["Nombre de feux"].apply(lambda x: f"{x:,}"),
-            textposition="outside",
-            textfont=dict(size=16, color="#2e2e2e"),  # police foncée
-            marker=dict(
-                color="#627CFF",
-                line=dict(color="black", width=1.5),
-            ),
-        )
-    )
+    st.markdown("👉 Le modèle **XGBOOST survival cox** obtient la meilleure performance globale.")
 
-    # ── Mise en page inspirée de ta Fig 1
-    fig_top10_feux.update_layout(
-        title="🔥 Top 10 des départements avec le plus d’incendies",
-        title_font_size=28,
-        template="plotly_white",                     # fond clair + grille
-        plot_bgcolor="rgba(245,248,255,1)",
-        paper_bgcolor="rgba(245,248,255,1)",
-        margin=dict(l=80, r=80, t=110, b=120),
-        font=dict(size=18, color="#2e2e2e"),        # police par défaut foncée
-        xaxis=dict(
-            title="Département",
-            tickangle=-35,
-            tickfont=dict(size=16),
-        ),
-        yaxis=dict(
-            title="Nombre de feux",
-            tickformat=",d",
-            tickfont=dict(size=16),
-        ),
-        bargap=0.05,
-    )
+    st.subheader("📈 Suivi des resultats quotidien du modèle")
 
-    st.plotly_chart(fig_top10_feux, use_container_width=True)
+    query = """SELECT * FROM metrics"""
+    df = pd.read_sql(query, engine)
+    df = pd.DataFrame(df)
+    st.dataframe(df.tail(15))
 
 
-# #---------------------------------------------------- Page Résultats des modèles -----------------------------------------
-
-# elif page == "Résultats des modèles":
-#     st.title("📈 Résultats des modèles prédictifs")
-#     st.markdown("### Comparaison des modèles de Survival Analysis")
-
-#     #--------------------------------------------------- Tableau codé en dur en Markdown -----------------------------------
-#     st.markdown("""
-#     | Modèle                            | Concordance Index | 
-#     |-----------------------------------|-------------------|
-#     | Predict survival fonction (MVP)   | 0.69              |                 
-#     | XGBOOST survival cox              | 0.809             |      
-#     """)
-
-#     st.markdown("👉 Le modèle **XGBOOST survival cox** obtient la meilleure performance globale.")
-
-#     show_footer()
+    show_footer()
