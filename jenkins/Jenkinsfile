@@ -49,7 +49,6 @@ pipeline {
 
         stage('Publish test results') {
             steps {
-                # Publique le rapport depuis le dossier monté
                 junit 'pytest-reports/pytest-report.xml'
             }
         }
