@@ -46,7 +46,7 @@ RUN pip install --upgrade pip && \
 COPY . /app
 
 # Vérifier la structure
-RUN ls -la /app && ls -la /app/tests
+RUN ls -la /app 
 
 # Point d'entrée
 CMD ["pytest", "tests/"]
