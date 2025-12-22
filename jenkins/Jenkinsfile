@@ -45,7 +45,7 @@ pipeline {
                 dir("${TEST_DIR}") {
                     sh '''
                         . venv/bin/activate
-                        export PYTHONPATH=$(pwd)/..
+                        export PYTHONPATH=${WORKSPACE}
                         pytest . --junitxml=pytest-report.xml
                     '''
                 }
