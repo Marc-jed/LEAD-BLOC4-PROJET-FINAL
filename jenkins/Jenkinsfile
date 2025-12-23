@@ -41,24 +41,24 @@ pipeline {
                     string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY'),
                     string(credentialsId: 'S3_BUCKET_NAME', variable: 'S3_BUCKET_NAME')
                 ]) {
-                    sh '''
-                        mkdir -p pytest-reports
-        
-                        docker run --rm \
-                          -e CI=true \
-                          -e AWS_ACCESS_KEY_ID \
-                          -e AWS_SECRET_ACCESS_KEY \
-                          -e AWS_DEFAULT_REGION \
-                          -e S3_BUCKET_NAME \
-                          -v "$WORKSPACE/pytest-reports:/app/pytest-reports" \
-                          fire-tests \
-                          pytest tests/ --junitxml=/app/pytest-reports/pytest-report.xml
-                    '''
+                        sh '''
+                            mkdir -p pytest-reports
+            
+                            docker run --rm \
+                              -e CI=true \
+                              -e AWS_ACCESS_KEY_ID \
+                              -e AWS_SECRET_ACCESS_KEY \
+                              -e AWS_DEFAULT_REGION \
+                              -e S3_BUCKET_NAME \
+                              -v "$WORKSPACE/pytest-reports:/app/pytest-reports" \
+                              fire-tests \
+                              pytest tests/ --junitxml=/app/pytest-reports/pytest-report.xml
+                        '''
+                    }
                 }
             }
         }
     }
-}
 
     post {
         always {
