@@ -3,13 +3,12 @@ import pytest
 import pandas as pd
 import boto3
 from sqlalchemy import create_engine
-from Fire_retrain.features_fusion import run_features_and_fusion
 
 
 @pytest.fixture(scope="session")
 def neon_engine():
     if os.getenv("CI") == "true":
-        pytest.skip("Skipping DB tests in CI environment")
+        pytest.skip("Skipping DB access in CI")
 
     try:
         host = os.environ["DB_HOST"]
@@ -27,7 +26,7 @@ def neon_engine():
 @pytest.fixture(scope="session")
 def s3_client():
     if os.getenv("CI") == "true":
-        pytest.skip("Skipping S3 access in CI environment")
+        pytest.skip("Skipping S3 access in CI")
 
     try:
         S3_BUCKET = os.environ["S3_BUCKET_NAME"]
@@ -53,28 +52,6 @@ def s3_client():
 
 
 @pytest.fixture(scope="session")
-def meteoday_get(neon_engine):
-    query = "SELECT * FROM meteoday WHERE date = CURRENT_DATE - INTERVAL '1 day'"
-    df = pd.read_sql(query, neon_engine)
-
-    if df.empty:
-        pytest.skip("No meteoday data for yesterday")
-
-    return df
-
-
-@pytest.fixture(scope="session")
-def data_for_test(neon_engine):
-    query = "SELECT * FROM data_prediction WHERE date = CURRENT_DATE - INTERVAL '1 day'"
-    df = pd.read_sql(query, neon_engine)
-
-    if df.empty:
-        pytest.skip("No prediction data for yesterday")
-
-    return df
-
-
-@pytest.fixture(scope="session")
 def coord_station(s3_client, tmp_path_factory):
     bucket = os.environ["S3_BUCKET_NAME"]
     s3_key = "dataset/coord_stations.csv"
@@ -83,11 +60,10 @@ def coord_station(s3_client, tmp_path_factory):
     local_file = tmp_dir / "coord_stations.csv"
 
     s3_client.download_file(bucket, s3_key, str(local_file))
-
     df = pd.read_csv(local_file, sep=",", low_memory=False)
 
     if df.empty:
-        pytest.fail("Downloaded coord_stations dataset is empty")
+        pytest.fail("coord_stations dataset is empty")
 
     return df
 
@@ -101,38 +77,9 @@ def historique_feu(s3_client, tmp_path_factory):
     local_file = tmp_dir / "historique_incendie.csv"
 
     s3_client.download_file(bucket, s3_key, str(local_file))
-
     df = pd.read_csv(local_file, sep=",", low_memory=False)
 
     if df.empty:
-        pytest.fail("Downloaded historique incendie dataset is empty")
+        pytest.fail("historique_feu dataset is empty")
 
     return df
-
-
-@pytest.fixture(scope="session")
-def prediction_get(neon_engine):
-    query = "SELECT * FROM data_prediction WHERE date = CURRENT_DATE - INTERVAL '1 day'"
-    return pd.read_sql(query, neon_engine)
-
-#################################################
-
-REQUIRED_INPUT_COLUMNS = {
-    "poste", "date", "rr", "drr", "tn", "htn", "tx", "htx", "tm", "tmnx",
-    "tnsol", "tn50", "tampli", "tntxm", "ffm", "fxi", "dxi", "hxi",
-    "fxy", "dxy", "hxy", "fxi3s", "hxi3s", "un", "hun", "ux", "hux",
-    "dhumi40", "dhumi80", "tsvm", "um", "orag", "brume",
-    "etpmon", "etpgrille"
-}
-
-################################################
-
-@pytest.fixture
-def fusion_features():
-    df = pd.DataFrame([{
-        **{col: 1 for col in REQUIRED_INPUT_COLUMNS},
-        "date": pd.Timestamp("2024-07-01"),
-        "poste": "20002001",
-    }])
-
-    return run_features_and_fusion(df)
