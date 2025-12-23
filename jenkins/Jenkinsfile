@@ -57,17 +57,18 @@ pipeline {
                 }
             }
         }
+    }
+}
 
-        post {
-            always {
-                junit 'pytest-reports/pytest-report.xml'
-            }
-            failure {
-                echo '❌ Tests échoués'
-            }
-            success {
-                echo '✅ Tests OK'
-            }
+    post {
+        always {
+            junit 'pytest-reports/pytest-report.xml'
+        }
+        failure {
+            echo '❌ Tests échoués'
+        }
+        success {
+            echo '✅ Tests OK'
         }
     }
 }
