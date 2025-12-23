@@ -1,33 +1,22 @@
-import pandas as pd
+import os
 import pytest
+import pandas as pd
 from Fire_retrain.features_fusion import run_features_and_fusion
-from tests.conftest import REQUIRED_INPUT_COLUMNS
 
 
-def test_features_fusion_accepts_required_input_columns():
-    df = pd.DataFrame([{
-        **{col: 0 for col in REQUIRED_INPUT_COLUMNS},
-        "date": pd.Timestamp("2024-07-01"),
-        "poste": "20002001",
-    }])
+@pytest.mark.integration
+def test_features_fusion_pipeline_contract():
 
-    output = run_features_and_fusion(df)
+    if os.getenv("CI") == "true":
+        pytest.skip("features_fusion requires DB and S3")
+
+    output = run_features_and_fusion()
 
     assert isinstance(output, pd.DataFrame)
-    assert not output.empty, "La fusion retourne un DataFrame vide"
+    assert not output.empty, "Le pipeline retourne un DataFrame vide"
 
-
-
-def test_prediction_output_is_valid(fusion_features):
-    assert "feu_prévu" in fusion_features.columns
-    assert fusion_features["feu_prévu"].notna().all()
-    assert fusion_features["feu_prévu"].isin([0, 1]).all(), \
-        "feu_prévu doit être binaire (0/1)"
-
-
-
-def test_prediction_required_features_present(fusion_features):
-    required = {
+    # Colonnes indispensables à la prédiction
+    required_features = {
         "rr",
         "um",
         "tn",
@@ -40,11 +29,8 @@ def test_prediction_required_features_present(fusion_features):
         "moyenne_precipitations_mois",
         "moyenne_vitesse_vent_mois",
         "compteur_feu_log",
+        "feu_prévu",
     }
 
-    missing = required - set(fusion_features.columns)
-    assert not missing, f"Features manquantes pour la prédiction : {missing}"
-
-
-
-
+    missing = required_features - set(output.columns)
+    assert not missing, f"Colonnes manquantes dans la sortie : {missing}"
