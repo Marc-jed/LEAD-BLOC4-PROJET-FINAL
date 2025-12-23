@@ -5,6 +5,7 @@ import os
 import boto3
 from pathlib import Path
 from sqlalchemy import create_engine
+from Fire_retrain.features_fusion import run_features_and_fusion
 
 
 @pytest.fixture(scope="session")
@@ -100,3 +101,26 @@ def prediction_get(neon_engine):
     query = f"""SELECT * FROM data_prediction WHERE date = CURRENT_DATE - INTERVAL '1 day' """
     df=pd.read_sql(query,neon_engine)
     return df
+
+
+REQUIRED_INPUT_COLUMNS = {
+    "poste", "date", "rr", "drr", "tn", "htn", "tx", "htx", "tm", "tmnx",
+    "tnsol", "tn50", "tampli", "tntxm", "ffm", "fxi", "dxi", "hxi",
+    "fxy", "dxy", "hxy", "fxi3s", "hxi3s", "un", "hun", "ux", "hux",
+    "dhumi40", "dhumi80", "tsvm", "um", "orag", "brume",
+    "etpmon", "etpgrille"
+}
+
+@pytest.fixture(scope="session")
+def fusion_features():
+    """
+    Fixture globale : retourne un DataFrame fusionné
+    minimal mais valide pour les tests ML.
+    """
+    df = pd.DataFrame([{
+        **{col: 1 for col in REQUIRED_INPUT_COLUMNS},
+        "date": pd.Timestamp("2024-07-01"),
+        "poste": "20002001",
+    }])
+
+    return run_features_and_fusion(df)
