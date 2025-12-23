@@ -18,8 +18,8 @@ pipeline {
                 sh '''
                     echo "=== Docker version ==="
                     docker --version
-        
-                    echo "=== Docker info ==="
+
+                    echo "=== Docker running containers ==="
                     docker ps
                 '''
             }
@@ -41,8 +41,10 @@ pipeline {
                     string(credentialsId: 'S3_BUCKET_NAME', variable: 'S3_BUCKET_NAME')
                 ]) {
                     sh '''
+                        echo "=== Nettoyage éventuel ==="
                         docker rm -f fire-tests-container || true
-        
+
+                        echo "=== Lancement des tests pytest ==="
                         docker run --name fire-tests-container \
                           -e CI=true \
                           -e AWS_ACCESS_KEY_ID \
@@ -53,26 +55,35 @@ pipeline {
                           pytest tests/ --junitxml=/app/pytest-report.xml
                     '''
                 }
-        
+
                 sh '''
+                    echo "=== Récupération du rapport pytest ==="
                     mkdir -p pytest-reports
+
                     docker cp fire-tests-container:/app/pytest-report.xml pytest-reports/pytest-report.xml
+
+                    echo "=== Contenu du dossier pytest-reports ==="
+                    ls -l pytest-reports
+
+                    echo "=== Nettoyage conteneur de tests ==="
                     docker rm fire-tests-container
                 '''
-        
-                sh 'ls -l pytest-reports'
-        
+
+                echo "=== Publication des résultats JUnit ==="
                 junit testResults: 'pytest-reports/pytest-report.xml'
             }
         }
-
+    }
 
     post {
-        failure {
-            echo '❌ Tests échoués'
-        }
         success {
-            echo '✅ Tests OK'
+            echo '✅ Pipeline CI terminé avec succès'
+        }
+        failure {
+            echo '❌ Échec du pipeline CI'
+        }
+        always {
+            echo '🏁 Fin du pipeline'
         }
     }
 }
