@@ -25,8 +25,6 @@ def neon_engine():
 
 @pytest.fixture(scope="session")
 def s3_client():
-    if os.getenv("CI") == "true":
-        pytest.skip("Skipping S3 access in CI")
 
     try:
         S3_BUCKET = os.environ["S3_BUCKET_NAME"]
