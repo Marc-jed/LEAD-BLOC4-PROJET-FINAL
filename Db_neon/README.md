@@ -91,9 +91,4 @@ Les bases créées via ce notebook sont utilisées par :
   * le suivi des performances du modèle,
   * la récupération des données nécessaires à la prédiction du risque d’incendie.
 
----
 
-Si tu veux, on peut maintenant :
-
-* faire un README racine qui décrit toute l’architecture du projet,
-* ou documenter précisément le **schéma des tables Neon** utilisées.
