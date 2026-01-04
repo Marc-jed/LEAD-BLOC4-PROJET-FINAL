@@ -114,9 +114,4 @@ Cette application permet de :
 
 Elle constitue la **vitrine fonctionnelle** du projet de prédiction des risques d’incendies de forêt en Corse.
 
----
 
-Si tu le souhaites, on peut maintenant :
-
-* rédiger un **README racine** qui décrit l’architecture complète du projet,
-* ou vérifier la **cohérence terminologique** entre tous les README pour une lead parfaitement lisible.
