@@ -87,11 +87,12 @@ db_name = os.getenv("DB_NAME")
 
 engine = create_engine(f"postgresql+psycopg2://{db_user}:{db_password}@{db_host}/{db_name}")
 
-@st.cache_data
+@st.cache_data(ttl=3600)
 def load_model_data():
     yesterday = (datetime.date.today() - datetime.timedelta(days=1))
-    query = """SELECT * FROM data_prediction WHERE date BETWEEN '2024-01-01' AND '{yesterday}'"""
-    # query = f"""SELECT * FROM data_prediction WHERE date = '{yesterday}'"""  
+    # query = """SELECT * FROM data_prediction WHERE date BETWEEN '2024-01-01' AND '{yesterday}'"""
+    # query = f"""SELECT * FROM data_prediction WHERE date = '{yesterday}'"""
+    query = """SELECT * FROM data_prediction WHERE date >= CURRENT_DATE - INTERVAL '180 days'"""
     # s3.download_file(os.getenv('S3_Bucket'),'compile/predictions_feu_2025.csv', 'prediction_feu_2025.csv')
     # url = "https://projet-incendie.s3.eu-west-3.amazonaws.com/dataset_modele_decompte.csv"
     try:
@@ -263,7 +264,7 @@ if page == "Accueil":
         hover_data={col_proba: ":.2%"},
         color=col_proba,
         color_continuous_scale="YlOrRd",  # jaune → orange → rouge
-        range_color=(0.0, vmax),
+        range_color=(0.0, 1),
         zoom=7,
         height=650,
     )
